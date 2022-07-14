@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: default
+spec:
+  selector:
+    app: minio-server
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio-server
+  namespace: default
+  labels:
+    app: minio-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-server
+  serviceName: minio
+  template:
+    metadata:
+      labels:
+        app: minio-server
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio
+          args:
+            - server
+            - /data
+          volumeMounts:
+            - mountPath: /data
+              name: minio-data
+          ports:
+            - containerPort: 9000
+      volumes:
+        - name: minio-data
+          hostPath:
+            path: /data/minio
