@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vdbench
+  labels:
+    app: vdbench
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: vdbench
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: vdbench
+          image: zwwhdlsdocker/vdbench:latest
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /vdbench/config
+              name: vdbench-cfg
+            - mountPath: /vdbench/output
+              name: output
+            - mountPath: /data
+              name: data
+          resources:
+            requests:
+              memory: "500Mi"
+            limits:
+              memory: "2Gi"
+          command: ["sh", "-c", "./vdbench -f /vdbench/config/vdbench.vdb -jn;tail -f /dev/null"]
+      volumes:
+        - name: data
+          hostPath:
+            path: /root/vdbench/data
+        - name: output
+          hostPath:
+            path: /root/vdbench/output
+        - name: vdbench-cfg
+          configMap:
+            name: vdbench-cfg
+            items:
+              - key: "vdbench.vdb"
+                path: "vdbench.vdb"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vdbench-cfg
+data:
+  vdbench.vdb: |
+    data_errors=1
+    fsd=fsd1,anchor=/data,depth=1,width=5,files=5,sizes=(1000m,0),shared=yes,openflags=o_direct
+    fwd=fwd1,fsd=fsd1,threads=16,xfersize=(512,20,4k,20,64k,20,512k,20,1024k,20),fileio=random,fileselect=random,rdpct=70
+    rd=rd1,fwd=fwd*,fwdrate=max,format=restart,elapsed=14400,interval=1
